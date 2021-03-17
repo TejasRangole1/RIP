@@ -27,7 +27,8 @@ public class Router extends Device
 	private ArpCache arpCache;
 
 	private List<RIPv2Entry> ripTable;
-
+    
+	private RIPv2Handler ripHandler;
 	/**
 	 * Creates a router for a specific host.
 	 * @param host hostname for the router
@@ -41,6 +42,7 @@ public class Router extends Device
 		for(Iface i : this.getInterfaces().values()) {
 			ripTable.add(new RIPv2Entry(i.getIpAddress(), i.getSubnetMask(), 1));
 		}
+		ripHandler = new RIPv2Handler(this, ripTable);
 	}
 
 	/**

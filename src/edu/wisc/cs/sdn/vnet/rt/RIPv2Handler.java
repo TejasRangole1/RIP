@@ -22,6 +22,7 @@ public class RIPv2Handler implements Runnable {
 		this.router = router;
 		this.ripTable = someTable;
 		RIPv2 request = new RIPv2();
+		request.setCommand(RIPv2.COMMAND_REQUEST);
 		sendRIPv2Packet(request);
 		responseThread = new Thread(this);
 		responseThread.start();
@@ -31,7 +32,6 @@ public class RIPv2Handler implements Runnable {
 	 * @param ripPacket
 	 */
 	public void sendRIPv2Packet(RIPv2 ripPacket){
-		ripPacket.setCommand(RIPv2.COMMAND_REQUEST);
 		UDP udpPacket = new UDP();
 		udpPacket.setSourcePort((short) 520);
 		udpPacket.setDestinationPort((short) 520);
@@ -66,6 +66,7 @@ public class RIPv2Handler implements Runnable {
 				break;
 			}
 			RIPv2 response = new RIPv2();
+			response.setCommand(RIPv2.COMMAND_RESPONSE);
 			response.setEntries(ripTable);
 			sendRIPv2Packet(response);
 		}
