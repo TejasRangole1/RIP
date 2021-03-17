@@ -10,7 +10,8 @@ import net.floodlightcontroller.packet.RIPv2;
 import net.floodlightcontroller.packet.RIPv2Entry;
 import net.floodlightcontroller.packet.UDP;
 
-public class RIPv2Handler implements Runnable {
+public class RIPv2ResponseHandler implements Runnable {
+
 
 	private Router router;
    /** Table to store rip entries */
@@ -18,7 +19,7 @@ public class RIPv2Handler implements Runnable {
 	
 	private Thread responseThread;
 	
-	public RIPv2Handler(Router router, List<RIPv2Entry> someTable){
+	public RIPv2ResponseHandler(Router router, List<RIPv2Entry> someTable){
 		this.router = router;
 		this.ripTable = someTable;
 		RIPv2 request = new RIPv2();

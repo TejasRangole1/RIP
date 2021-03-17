@@ -27,8 +27,11 @@ public class Router extends Device
 	private ArpCache arpCache;
 
 	private List<RIPv2Entry> ripTable;
-    
-	private RIPv2Handler ripHandler;
+    /** Thread to handle RIP responses */
+	private RIPv2ResponseHandler ripHandler;
+
+	/** Thread to delete rip entries after time has expired*/
+	private RIPv2Updater updateHandler;
 	/**
 	 * Creates a router for a specific host.
 	 * @param host hostname for the router
@@ -42,7 +45,7 @@ public class Router extends Device
 		for(Iface i : this.getInterfaces().values()) {
 			ripTable.add(new RIPv2Entry(i.getIpAddress(), i.getSubnetMask(), 1));
 		}
-		ripHandler = new RIPv2Handler(this, ripTable);
+		ripHandler = new RIPv2ResponseHandler(this, ripTable);
 	}
 
 	/**
@@ -105,7 +108,21 @@ public class Router extends Device
 		switch(etherPacket.getEtherType())
 		{
 		case Ethernet.TYPE_IPv4:
-			this.handleIpPacket(etherPacket, inIface);
+			IPv4 ipPacket = (IPv4) etherPacket.getPayload();
+			if(ipPacket.getProtocol() == IPv4.PROTOCOL_UDP){
+				if(ipPacket.getDestinationAddress() == IPv4.toIPv4Address("224.0.0.9")){
+					UDP udpPacket = (UDP) ipPacket.getPayload();
+					if(udpPacket.getDestinationPort() == (short) 520){
+						RIPv2 ripPacket = (RIPv2) udpPacket.getPayload();
+						if(ripPacket.getCommand() == RIPv2.COMMAND_RESPONSE){
+							
+						}
+					}
+				}
+			}
+			else{
+				this.handleIpPacket(etherPacket, inIface);
+			}
 			break;
 		// Ignore all other packet types, for now
 		}
