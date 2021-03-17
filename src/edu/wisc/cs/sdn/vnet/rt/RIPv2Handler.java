@@ -23,7 +23,10 @@ public class RIPv2Handler implements Runnable {
 		thread = new Thread(this);
 		thread.start();
 	}
-
+    /**
+	 * Sends a RIP packet out all interfaces
+	 * @param ripPacket
+	 */
 	public void sendRIPv2Packet(RIPv2 ripPacket){
 		ripPacket.setCommand(RIPv2.COMMAND_REQUEST);
 		UDP udpPacket = new UDP();

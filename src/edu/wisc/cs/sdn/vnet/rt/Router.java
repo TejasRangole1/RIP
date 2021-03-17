@@ -36,32 +36,6 @@ public class Router extends Device
 			RouteEntry entry = new RouteEntry(i.getIpAddress(), 0, i.getSubnetMask(), i, 0);
 			routeTable.insert(i.getIpAddress(), 0, i.getSubnetMask(), i);
 		}
-		sendRIPv2Requests();
-	}
-	/*
-	 * Creates a RIPv2 request packet and sends it out all interfaces
-	 */
-	public void sendRIPv2Requests() {
-		RIPv2 request = new RIPv2();
-		request.setCommand(RIPv2.COMMAND_REQUEST);
-		UDP udpPacket = new UDP();
-		udpPacket.setSourcePort((short) 520);
-		udpPacket.setDestinationPort((short) 520);
-		udpPacket.setPayload(request);
-		for(Iface i : this.getInterfaces().values()) {
-			IPv4 ipPacket = new IPv4();
-			ipPacket.setPayload(udpPacket);
-			ipPacket.setSourceAddress(i.getIpAddress());
-			ipPacket.setDestinationAddress("224.0.0.9");
-			ipPacket.setProtocol(IPv4.PROTOCOL_UDP);
-			ipPacket.setTtl((byte) 2); 
-			Ethernet etherPacket = new Ethernet();
-			etherPacket.setPayload(ipPacket);
-			etherPacket.setSourceMACAddress(i.getMacAddress().toBytes());
-			etherPacket.setDestinationMACAddress("FF:FF:FF:FF:FF:FF");
-			etherPacket.setEtherType(Ethernet.TYPE_IPv4);
-			this.sendPacket(etherPacket, i);
-		}
 	}
 
 	/**
