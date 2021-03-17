@@ -22,6 +22,7 @@ public class RIPv2Handler implements Runnable {
 		this.router = router;
 		this.ripTable = someTable;
 		RIPv2 request = new RIPv2();
+		sendRIPv2Packet(request);
 		responseThread = new Thread(this);
 		responseThread.start();
 	}
