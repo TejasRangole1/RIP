@@ -1,27 +1,29 @@
 package edu.wisc.cs.sdn.vnet.rt;
 
+import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 import edu.wisc.cs.sdn.vnet.Iface;
 import net.floodlightcontroller.packet.Ethernet;
 import net.floodlightcontroller.packet.IPv4;
 import net.floodlightcontroller.packet.RIPv2;
+import net.floodlightcontroller.packet.RIPv2Entry;
 import net.floodlightcontroller.packet.UDP;
 
 public class RIPv2Handler implements Runnable {
 
 	private Router router;
-   
-	private RouteTable routeTable;
+   /** Table to store rip entries */
+	private List<RIPv2Entry> ripTable;
 	
-	private Thread thread;
+	private Thread responseThread;
 	
-	public RIPv2Handler(Router router, RouteTable rTable) {
+	public RIPv2Handler(Router router, List<RIPv2Entry> someTable){
 		this.router = router;
-		this.routeTable = rTable;
+		this.ripTable = someTable;
 		RIPv2 request = new RIPv2();
-		thread = new Thread(this);
-		thread.start();
+		responseThread = new Thread(this);
+		responseThread.start();
 	}
     /**
 	 * Sends a RIP packet out all interfaces
@@ -53,14 +55,18 @@ public class RIPv2Handler implements Runnable {
 	 * Sends an unsolicted RIPv2 response every 10 seconds
 	 */
 	@Override
-	public void run() {
+	public void run(){
 		// TODO Auto-generated method stub
-		while(true) {
-			try {
-				lock.lock();
-			} finally {
-				
+		while(true){
+			try{
+				// sleep for 10 seconds
+				responseThread.sleep(10000);
+			} catch (InterruptedException e){
+				break;
 			}
+			RIPv2 response = new RIPv2();
+			response.setEntries(ripTable);
+			sendRIPv2Packet(response);
 		}
 	}
 	

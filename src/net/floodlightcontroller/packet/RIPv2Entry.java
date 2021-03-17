@@ -15,6 +15,7 @@ public class RIPv2Entry
 	protected int subnetMask;
 	protected int nextHopAddress;
 	protected int metric;
+    protected long lastUpdated;
 
     public RIPv2Entry()
     { }
@@ -25,6 +26,7 @@ public class RIPv2Entry
         this.address = address;
         this.subnetMask = subnetMask;
         this.metric = metric;
+        this.lastUpdated =  System.currentTimeMillis();
     }
 
 	public String toString()

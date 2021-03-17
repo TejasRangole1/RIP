@@ -1,5 +1,6 @@
 package edu.wisc.cs.sdn.vnet.rt;
 
+import java.util.List;
 import java.util.Map.Entry;
 
 import edu.wisc.cs.sdn.vnet.Device;
@@ -9,6 +10,7 @@ import edu.wisc.cs.sdn.vnet.Iface;
 import net.floodlightcontroller.packet.Ethernet;
 import net.floodlightcontroller.packet.IPv4;
 import net.floodlightcontroller.packet.RIPv2;
+import net.floodlightcontroller.packet.RIPv2Entry;
 import net.floodlightcontroller.packet.UDP;
 
 /**
@@ -22,6 +24,8 @@ public class Router extends Device
 	/** ARP cache for the router */
 	private ArpCache arpCache;
 
+	private List<RIPv2Entry> ripTable;
+
 	/**
 	 * Creates a router for a specific host.
 	 * @param host hostname for the router
@@ -33,8 +37,7 @@ public class Router extends Device
 		this.arpCache = new ArpCache();
 		// initializing route table with entries of directly connected interfaces
 		for(Iface i : this.getInterfaces().values()) {
-			RouteEntry entry = new RouteEntry(i.getIpAddress(), 0, i.getSubnetMask(), i, 0);
-			routeTable.insert(i.getIpAddress(), 0, i.getSubnetMask(), i);
+			ripTable.add(new RIPv2Entry(i.getIpAddress(), i.getSubnetMask(), 1));
 		}
 	}
 

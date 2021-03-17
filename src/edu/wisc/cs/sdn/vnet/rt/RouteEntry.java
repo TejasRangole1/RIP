@@ -17,6 +17,8 @@ public class RouteEntry
 	
 	/** Subnet mask */
 	private int maskAddress;
+    /** Network address to be used by RIP */
+	private int networkAddress;
 	
 	/** Router interface out which packets should be sent to reach
 	 * the destination or gateway */
@@ -41,6 +43,7 @@ public class RouteEntry
 		this.destinationAddress = destinationAddress;
 		this.gatewayAddress = gatewayAddress;
 		this.maskAddress = maskAddress;
+		this.networkAddress = destinationAddress & maskAddress;
 		this.iface = iface;
 		this.cost = linkCost;
 		lastUpdated = System.currentTimeMillis();
@@ -66,6 +69,13 @@ public class RouteEntry
 	 */
 	public int getMaskAddress()
 	{ return this.maskAddress; }
+
+	/**
+	 * 
+	 * @return network address
+	 */
+	public int getNetworkAddress()
+	{return this.networkAddress;}
 	
 	public long getLastUpdated() {return this.lastUpdated;}
 	/**

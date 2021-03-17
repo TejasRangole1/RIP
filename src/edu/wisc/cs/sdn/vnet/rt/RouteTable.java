@@ -57,6 +57,9 @@ public class RouteTable
 		}
 	}
 
+	public List<RouteEntry> getEntries()
+	{return this.entries;}
+
 	/**
 	 * Populate the route table from a file.
 	 * @param filename name of the file containing the static route table
