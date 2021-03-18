@@ -41,6 +41,10 @@ public class RIPv2Entry
                 IPv4.fromIPv4Address(this.nextHopAddress), this.metric);
 	}
 
+    public long getLastUpdated(){
+        return this.lastUpdated;
+    }
+
     public short getAddressFamily()
     { return this.addressFamily; }
 

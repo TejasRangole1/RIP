@@ -53,7 +53,7 @@ public class Router extends Device
 			ripTable.put(subnet, new RIPv2Entry(subnet, i.getSubnetMask(), 1, i.getIpAddress()));
 		}
 		RIPv2Sender sender = new RIPv2Sender(this, ripTable);
-		
+		RIPv2Updater updater = new RIPv2Updater(ripTable);
 	}
 
 	/**
