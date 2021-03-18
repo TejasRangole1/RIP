@@ -18,13 +18,15 @@ public class RIPv2ResponseHandler implements Runnable {
 	private List<RIPv2Entry> ripTable;
 	
 	private Thread responseThread;
+
+	private ReentrantLock lock;
 	
-	public RIPv2ResponseHandler(Router router, List<RIPv2Entry> someTable){
+	public RIPv2ResponseHandler(Router router, List<RIPv2Entry> someTable, ReentrantLock lock){
 		this.router = router;
 		this.ripTable = someTable;
-		RIPv2 request = new RIPv2();
-		request.setCommand(RIPv2.COMMAND_REQUEST);
-		sendRIPv2Packet(request);
+		RIPv2 request = createRipPacket(RIPv2.COMMAND_REQUEST);
+		floodRIPv2Packet(request);
+		this.lock = lock;
 		responseThread = new Thread(this);
 		responseThread.start();
 	}
@@ -32,24 +34,54 @@ public class RIPv2ResponseHandler implements Runnable {
 	 * Sends a RIP packet out all interfaces
 	 * @param ripPacket
 	 */
-	public void sendRIPv2Packet(RIPv2 ripPacket){
+	public void floodRIPv2Packet(RIPv2 ripPacket){
+		for(Iface i : router.getInterfaces().values()) {
+			Ethernet etherPacket = encapsulateRIPv2Packet(ripPacket, i);
+			router.sendPacket(etherPacket, i);
+		}
+	}
+    /**
+	 * Send RIP packet to a specific node
+	 * @param ripPacket
+	 * @param i
+	 */
+	public void sendRIPv2Packet(RIPv2 ripPacket, Iface i){
+		Ethernet etherPacket = encapsulateRIPv2Packet(ripPacket, i);
+		router.sendPacket(etherPacket, i);
+	}
+
+	public Ethernet encapsulateRIPv2Packet(RIPv2 ripPacket, Iface i){
 		UDP udpPacket = new UDP();
 		udpPacket.setSourcePort((short) 520);
 		udpPacket.setDestinationPort((short) 520);
 		udpPacket.setPayload(ripPacket);
-		for(Iface i : router.getInterfaces().values()) {
-			IPv4 ipPacket = new IPv4();
-			ipPacket.setPayload(udpPacket);
-			ipPacket.setSourceAddress(i.getIpAddress());
-			ipPacket.setDestinationAddress("224.0.0.9");
-			ipPacket.setProtocol(IPv4.PROTOCOL_UDP);
-			ipPacket.setTtl((byte) 2); 
-			Ethernet etherPacket = new Ethernet();
-			etherPacket.setPayload(ipPacket);
-			etherPacket.setSourceMACAddress(i.getMacAddress().toBytes());
-			etherPacket.setDestinationMACAddress("FF:FF:FF:FF:FF:FF");
-			etherPacket.setEtherType(Ethernet.TYPE_IPv4);
-			router.sendPacket(etherPacket, i);
+		IPv4 ipPacket = new IPv4();
+		ipPacket.setPayload(udpPacket);
+		ipPacket.setSourceAddress(i.getIpAddress());
+		ipPacket.setDestinationAddress("224.0.0.9");
+		ipPacket.setProtocol(IPv4.PROTOCOL_UDP);
+		ipPacket.setTtl((byte) 2); 
+		Ethernet etherPacket = new Ethernet();
+		etherPacket.setPayload(ipPacket);
+		etherPacket.setSourceMACAddress(i.getMacAddress().toBytes());
+		etherPacket.setDestinationMACAddress("FF:FF:FF:FF:FF:FF");
+		etherPacket.setEtherType(Ethernet.TYPE_IPv4);
+		return etherPacket;
+	}
+
+	public RIPv2 createRipPacket(byte command){
+		RIPv2 ripPacket = new RIPv2();
+		ripPacket.setCommand(command);
+		if(command == RIPv2.COMMAND_RESPONSE){
+			ripPacket.setEntries(ripTable);
+		}
+		return ripPacket;
+	}
+
+	public void handleResponse(){
+		try{
+			lock.lock();
+
 		}
 	}
 	
@@ -66,10 +98,8 @@ public class RIPv2ResponseHandler implements Runnable {
 			} catch (InterruptedException e){
 				break;
 			}
-			RIPv2 response = new RIPv2();
-			response.setCommand(RIPv2.COMMAND_RESPONSE);
-			response.setEntries(ripTable);
-			sendRIPv2Packet(response);
+			RIPv2 response = createRipPacket(RIPv2.COMMAND_RESPONSE);
+			floodRIPv2Packet(response);
 		}
 	}
 	

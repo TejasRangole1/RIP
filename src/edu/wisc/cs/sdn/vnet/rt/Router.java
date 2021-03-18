@@ -4,6 +4,7 @@ package edu.wisc.cs.sdn.vnet.rt;
 
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.locks.ReentrantLock;
 
 import edu.wisc.cs.sdn.vnet.Device;
 import edu.wisc.cs.sdn.vnet.DumpFile;
@@ -32,6 +33,9 @@ public class Router extends Device
 
 	/** Thread to delete rip entries after time has expired*/
 	private RIPv2Updater updateHandler;
+
+	/** Shared lock used by updater and response handler */
+	private ReentrantLock lock;
 	/**
 	 * Creates a router for a specific host.
 	 * @param host hostname for the router
@@ -45,7 +49,8 @@ public class Router extends Device
 		for(Iface i : this.getInterfaces().values()) {
 			ripTable.add(new RIPv2Entry(i.getIpAddress(), i.getSubnetMask(), 1));
 		}
-		ripHandler = new RIPv2ResponseHandler(this, ripTable);
+		lock = new ReentrantLock();
+		ripHandler = new RIPv2ResponseHandler(this, ripTable, lock);
 	}
 
 	/**
@@ -108,6 +113,7 @@ public class Router extends Device
 		switch(etherPacket.getEtherType())
 		{
 		case Ethernet.TYPE_IPv4:
+		    // checks if incoming packet is a RIP packet
 			IPv4 ipPacket = (IPv4) etherPacket.getPayload();
 			if(ipPacket.getProtocol() == IPv4.PROTOCOL_UDP){
 				if(ipPacket.getDestinationAddress() == IPv4.toIPv4Address("224.0.0.9")){
@@ -115,7 +121,11 @@ public class Router extends Device
 					if(udpPacket.getDestinationPort() == (short) 520){
 						RIPv2 ripPacket = (RIPv2) udpPacket.getPayload();
 						if(ripPacket.getCommand() == RIPv2.COMMAND_RESPONSE){
-							
+							ripHandler.handleResponse();
+						}
+						else{
+							RIPv2 response = ripHandler.createRipPacket(RIPv2.COMMAND_RESPONSE);
+							ripHandler.sendRIPv2Packet(response, inIface);
 						}
 					}
 				}
@@ -198,7 +208,7 @@ public class Router extends Device
 		// If no gateway, then nextHop is IP destination
 		int nextHop = bestMatch.getGatewayAddress();
 		if (0 == nextHop)
-		{ nextHop = dstAddr; }
+		{ nextHop = dstAddr; }+
 
 		// Set destination MAC address in Ethernet header
 		ArpEntry arpEntry = this.arpCache.lookup(nextHop);
