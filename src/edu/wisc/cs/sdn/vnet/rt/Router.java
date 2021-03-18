@@ -28,11 +28,13 @@ public class Router extends Device
 	private ArpCache arpCache;
 
 	private List<RIPv2Entry> ripTable;
-    /** Thread to handle RIP responses */
-	private RIPv2ResponseHandler ripHandler;
+    /** Thread to send RIP responses */
+	private RIPv2Sender ripSender;
 
 	/** Thread to delete rip entries after time has expired*/
-	private RIPv2Updater updateHandler;
+	private RIPv2Updater ripUpdater;
+
+	/** Thread to process RIP responses */
 
 	/** Shared lock used by updater and response handler */
 	private ReentrantLock lock;
@@ -50,7 +52,8 @@ public class Router extends Device
 			ripTable.add(new RIPv2Entry(i.getIpAddress(), i.getSubnetMask(), 1));
 		}
 		lock = new ReentrantLock();
-		ripHandler = new RIPv2ResponseHandler(this, ripTable, lock);
+		RIPv2Sender sender = new RIPv2Sender(this, ripTable);
+
 	}
 
 	/**
@@ -119,14 +122,6 @@ public class Router extends Device
 				if(ipPacket.getDestinationAddress() == IPv4.toIPv4Address("224.0.0.9")){
 					UDP udpPacket = (UDP) ipPacket.getPayload();
 					if(udpPacket.getDestinationPort() == (short) 520){
-						RIPv2 ripPacket = (RIPv2) udpPacket.getPayload();
-						if(ripPacket.getCommand() == RIPv2.COMMAND_RESPONSE){
-							ripHandler.handleResponse();
-						}
-						else{
-							RIPv2 response = ripHandler.createRipPacket(RIPv2.COMMAND_RESPONSE);
-							ripHandler.sendRIPv2Packet(response, inIface);
-						}
 					}
 				}
 			}
@@ -208,7 +203,7 @@ public class Router extends Device
 		// If no gateway, then nextHop is IP destination
 		int nextHop = bestMatch.getGatewayAddress();
 		if (0 == nextHop)
-		{ nextHop = dstAddr; }+
+		{ nextHop = dstAddr; }
 
 		// Set destination MAC address in Ethernet header
 		ArpEntry arpEntry = this.arpCache.lookup(nextHop);
