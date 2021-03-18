@@ -53,7 +53,7 @@ public class Router extends Device
 		}
 		lock = new ReentrantLock();
 		RIPv2Sender sender = new RIPv2Sender(this, ripTable);
-
+		
 	}
 
 	/**
@@ -99,6 +99,17 @@ public class Router extends Device
 		System.out.print(this.arpCache.toString());
 		System.out.println("----------------------------------");
 	}
+	/**
+	 * Updates RIPv2 table by examining the response packet
+	 * @param response
+	 */
+	public void handleResponse(RIPv2 response){
+		try{
+			lock.lock();
+		}
+	}
+
+	public void 
 	
 	/**
 	 * Handle an Ethernet packet received on a specific interface.
@@ -122,6 +133,7 @@ public class Router extends Device
 				if(ipPacket.getDestinationAddress() == IPv4.toIPv4Address("224.0.0.9")){
 					UDP udpPacket = (UDP) ipPacket.getPayload();
 					if(udpPacket.getDestinationPort() == (short) 520){
+						if()
 					}
 				}
 			}
