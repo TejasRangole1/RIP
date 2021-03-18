@@ -109,7 +109,7 @@ public class Router extends Device
 		}
 	}
 
-	public void 
+	
 	
 	/**
 	 * Handle an Ethernet packet received on a specific interface.
