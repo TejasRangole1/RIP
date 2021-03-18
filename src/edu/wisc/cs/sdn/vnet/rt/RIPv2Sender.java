@@ -1,6 +1,7 @@
 package edu.wisc.cs.sdn.vnet.rt;
 
 import java.util.List;
+import java.util.Map;
 
 import edu.wisc.cs.sdn.vnet.Iface;
 import net.floodlightcontroller.packet.Ethernet;
@@ -17,12 +18,12 @@ public class RIPv2Sender implements Runnable {
 
 	private Router router;
    /** Table to store rip entries */
-	private List<RIPv2Entry> ripTable;
+	private Map<Integer, RIPv2Entry> ripTable;
 	
 	private Thread responseThread;
 
 	
-	public RIPv2Sender(Router router, List<RIPv2Entry> someTable){
+	public RIPv2Sender(Router router, Map<Integer, RIPv2Entry> someTable){
 		this.router = router;
 		this.ripTable = someTable;
 		RIPv2 request = new RIPv2();
@@ -72,6 +73,8 @@ public class RIPv2Sender implements Runnable {
 				break;
 			}
 			RIPv2 response = new RIPv2();
+			List<RIPv2Entry> entries = (List<RIPv2Entry>) ripTable.values();
+			response.setEntries(entries);
 			response.setCommand(RIPv2.COMMAND_RESPONSE);
 			floodRIPv2Packet(response);
 		}

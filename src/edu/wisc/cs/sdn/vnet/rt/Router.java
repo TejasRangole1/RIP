@@ -3,7 +3,9 @@ package edu.wisc.cs.sdn.vnet.rt;
 
 
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 import edu.wisc.cs.sdn.vnet.Device;
@@ -27,7 +29,7 @@ public class Router extends Device
 	/** ARP cache for the router */
 	private ArpCache arpCache;
 
-	private List<RIPv2Entry> ripTable;
+	private Map<Integer, RIPv2Entry> ripTable;
     /** Thread to send RIP responses */
 	private RIPv2Sender ripSender;
 
@@ -47,9 +49,10 @@ public class Router extends Device
 		super(host,logfile);
 		this.routeTable = new RouteTable();
 		this.arpCache = new ArpCache();
+		this.ripTable = new ConcurrentHashMap<>();
 		// initializing route table with entries of directly connected interfaces
 		for(Iface i : this.getInterfaces().values()) {
-			ripTable.add(new RIPv2Entry(i.getIpAddress(), i.getSubnetMask(), 1));
+			ripTable.put(i.getIpAddress(), new RIPv2Entry(i.getIpAddress(), i.getSubnetMask(), 1));
 		}
 		lock = new ReentrantLock();
 		RIPv2Sender sender = new RIPv2Sender(this, ripTable);
@@ -100,12 +103,69 @@ public class Router extends Device
 		System.out.println("----------------------------------");
 	}
 	/**
+	 * Encapsulates rip packet into ethernet frame
+	 * @param ripPacket
+	 * @param i
+	 * @return
+	 */
+	public Ethernet encapsulateRIPv2Packet(RIPv2 ripPacket, Iface i){
+		UDP udpPacket = new UDP();
+		udpPacket.setSourcePort((short) 520);
+		udpPacket.setDestinationPort((short) 520);
+		udpPacket.setPayload(ripPacket);
+		IPv4 ipPacket = new IPv4();
+		ipPacket.setPayload(udpPacket);
+		ipPacket.setSourceAddress(i.getIpAddress());
+		ipPacket.setDestinationAddress("224.0.0.9");
+		ipPacket.setProtocol(IPv4.PROTOCOL_UDP);
+		ipPacket.setTtl((byte) 2); 
+		Ethernet etherPacket = new Ethernet();
+		etherPacket.setPayload(ipPacket);
+		etherPacket.setSourceMACAddress(i.getMacAddress().toBytes());
+		etherPacket.setDestinationMACAddress("FF:FF:FF:FF:FF:FF");
+		etherPacket.setEtherType(Ethernet.TYPE_IPv4);
+		return etherPacket;
+	}
+	/**
+	 * Checks if ethernet frame is a RIPv2 packet, if it is then return the packet otherwise return null
+	 * @param etherPacket
+	 * @return
+	 */
+	public RIPv2 isRIPv2Packet(Ethernet etherPacket){
+		IPv4 ipPacket = (IPv4) etherPacket.getPayload();
+		if(ipPacket.getProtocol() == IPv4.PROTOCOL_UDP){
+			if(ipPacket.getDestinationAddress() == IPv4.toIPv4Address("224.0.0.9")){
+				UDP udpPacket = (UDP) ipPacket.getPayload();
+				if(udpPacket.getDestinationPort() == (short) 520){
+					RIPv2 ripPacket = (RIPv2) udpPacket.getPayload();
+					return ripPacket;
+				}
+			}
+		}
+		return null;
+	}
+	/**
 	 * Updates RIPv2 table by examining the response packet
 	 * @param response
 	 */
-	public void handleResponse(RIPv2 response){
-		try{
-			lock.lock();
+	public void handleResponse(RIPv2 response, int source){
+		for(RIPv2Entry entry : response.getEntries()){
+			int dest = entry.getAddress();
+			int cost = entry.getMetric();
+			if(ripTable.containsKey(dest)){
+				cost +=	ripTable.get(source).getMetric();
+				// if the new cost to destination is less than the current cost, update the ripTable with the new route
+				if(cost < ripTable.get(dest).getMetric()){
+					entry.setMetric(cost);
+					ripTable.put(dest, entry);
+				}
+			}
+			// route does not exist in rip table, add it
+			else{
+				RIPv2Entry route = new RIPv2Entry(dest, entry.getSubnetMask(), cost + ripTable.get(source).getMetric());
+				route.setNextHopAddress(source);
+				ripTable.put(dest, route);
+			}
 		}
 	}
 
@@ -129,12 +189,20 @@ public class Router extends Device
 		case Ethernet.TYPE_IPv4:
 		    // checks if incoming packet is a RIP packet
 			IPv4 ipPacket = (IPv4) etherPacket.getPayload();
-			if(ipPacket.getProtocol() == IPv4.PROTOCOL_UDP){
-				if(ipPacket.getDestinationAddress() == IPv4.toIPv4Address("224.0.0.9")){
-					UDP udpPacket = (UDP) ipPacket.getPayload();
-					if(udpPacket.getDestinationPort() == (short) 520){
-						if()
-					}
+			RIPv2 ripPacket = isRIPv2Packet(etherPacket);
+			if(ripPacket != null){
+				// send response if the packet received is a RIP request
+				if(ripPacket.getCommand() == RIPv2.COMMAND_REQUEST){
+					RIPv2 response = new RIPv2();
+					List<RIPv2Entry> entries = (List<RIPv2Entry>) ripTable.values();
+					response.setEntries(entries);
+					response.setCommand(RIPv2.COMMAND_RESPONSE);
+					Ethernet ripFrame = encapsulateRIPv2Packet(response, inIface);
+					sendPacket(ripFrame, inIface);
+				}
+				// update tables based on RIP response packet
+				else{
+					handleResponse(ripPacket, ipPacket.getSourceAddress());
 				}
 			}
 			else{
