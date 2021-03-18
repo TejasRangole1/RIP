@@ -2,6 +2,8 @@ package net.floodlightcontroller.packet;
 
 import java.nio.ByteBuffer;
 
+import edu.wisc.cs.sdn.vnet.Iface;
+
 /**
   * @author Anubhavnidhi Abhashkumar and Aaron Gember-Jacobson
   */
@@ -20,12 +22,13 @@ public class RIPv2Entry
     public RIPv2Entry()
     { }
 
-    public RIPv2Entry(int address, int subnetMask, int metric)
+    public RIPv2Entry(int address, int subnetMask, int metric, int nextHopAddress)
     {
         this.addressFamily = ADDRESS_FAMILY_IPv4;
         this.address = address;
         this.subnetMask = subnetMask;
         this.metric = metric;
+        this.nextHopAddress = nextHopAddress;
         this.lastUpdated =  System.currentTimeMillis();
     }
 

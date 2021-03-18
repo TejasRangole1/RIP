@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
 
 import edu.wisc.cs.sdn.vnet.Device;
 import edu.wisc.cs.sdn.vnet.DumpFile;
@@ -28,7 +27,7 @@ public class Router extends Device
 
 	/** ARP cache for the router */
 	private ArpCache arpCache;
-
+    /** Data Structure for RIP-based route table */
 	private Map<Integer, RIPv2Entry> ripTable;
     /** Thread to send RIP responses */
 	private RIPv2Sender ripSender;
@@ -38,8 +37,6 @@ public class Router extends Device
 
 	/** Thread to process RIP responses */
 
-	/** Shared lock used by updater and response handler */
-	private ReentrantLock lock;
 	/**
 	 * Creates a router for a specific host.
 	 * @param host hostname for the router
@@ -52,9 +49,9 @@ public class Router extends Device
 		this.ripTable = new ConcurrentHashMap<>();
 		// initializing route table with entries of directly connected interfaces
 		for(Iface i : this.getInterfaces().values()) {
-			ripTable.put(i.getIpAddress(), new RIPv2Entry(i.getIpAddress(), i.getSubnetMask(), 1));
+			int subnet = i.getIpAddress() & i.getSubnetMask();
+			ripTable.put(subnet, new RIPv2Entry(subnet, i.getSubnetMask(), 1, i.getIpAddress()));
 		}
-		lock = new ReentrantLock();
 		RIPv2Sender sender = new RIPv2Sender(this, ripTable);
 		
 	}
@@ -148,12 +145,12 @@ public class Router extends Device
 	 * Updates RIPv2 table by examining the response packet
 	 * @param response
 	 */
-	public void handleResponse(RIPv2 response, int source){
+	public void handleResponse(RIPv2 response, int sourceSubnet, int sourceIP){
 		for(RIPv2Entry entry : response.getEntries()){
 			int dest = entry.getAddress();
 			int cost = entry.getMetric();
 			if(ripTable.containsKey(dest)){
-				cost +=	ripTable.get(source).getMetric();
+				cost +=	ripTable.get(sourceSubnet).getMetric();
 				// if the new cost to destination is less than the current cost, update the ripTable with the new route
 				if(cost < ripTable.get(dest).getMetric()){
 					entry.setMetric(cost);
@@ -162,9 +159,7 @@ public class Router extends Device
 			}
 			// route does not exist in rip table, add it
 			else{
-				RIPv2Entry route = new RIPv2Entry(dest, entry.getSubnetMask(), cost + ripTable.get(source).getMetric());
-				route.setNextHopAddress(source);
-				ripTable.put(dest, route);
+				ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost + ripTable.get(sourceSubnet).getMetric(), sourceIP));
 			}
 		}
 	}
@@ -202,7 +197,8 @@ public class Router extends Device
 				}
 				// update tables based on RIP response packet
 				else{
-					handleResponse(ripPacket, ipPacket.getSourceAddress());
+					int sourceSubnet = ipPacket.getSourceAddress() & inIface.getSubnetMask();
+					handleResponse(ripPacket, sourceSubnet, ipPacket.getSourceAddress());
 				}
 			}
 			else{
@@ -266,25 +262,36 @@ public class Router extends Device
 		int dstAddr = ipPacket.getDestinationAddress();
 
 		// Find matching route table entry 
-		RouteEntry bestMatch = this.routeTable.lookup(dstAddr);
-
+		// RouteEntry bestMatch = this.routeTable.lookup(dstAddr);
+		// Find matching route in rip table entry
+		RIPv2Entry bestMatch = ripTable.get(dstAddr);
 		// If no entry matched, do nothing
 		if (null == bestMatch)
 		{ return; }
 
 		// Make sure we don't sent a packet back out the interface it came in
+		/*
 		Iface outIface = bestMatch.getInterface();
 		if (outIface == inIface)
 		{ return; }
-
+        */
+		int nextHop = bestMatch.getNextHopAddress();
+		Iface outIface = null;
+		for(Map.Entry<String, Iface> entry : this.getInterfaces().entrySet()){
+			outIface = (entry.getValue().getIpAddress() == nextHop) ? entry.getValue() : outIface;
+			// Make sure we don't send a packet back out the interface it came in
+			if(outIface == inIface)
+			{return;}
+		}
 		// Set source MAC address in Ethernet header
 		etherPacket.setSourceMACAddress(outIface.getMacAddress().toBytes());
 
 		// If no gateway, then nextHop is IP destination
+		/*
 		int nextHop = bestMatch.getGatewayAddress();
 		if (0 == nextHop)
 		{ nextHop = dstAddr; }
-
+		*/
 		// Set destination MAC address in Ethernet header
 		ArpEntry arpEntry = this.arpCache.lookup(nextHop);
 		if (null == arpEntry)
