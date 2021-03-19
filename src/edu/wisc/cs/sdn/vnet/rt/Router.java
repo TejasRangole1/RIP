@@ -137,7 +137,7 @@ public class Router extends Device
 	 */
 	public RIPv2 isRIPv2Packet(Ethernet etherPacket){
 		IPv4 ipPacket = (IPv4) etherPacket.getPayload();
-		if(ipPacket.getProtocol() == IPv4.PROTOCOL_UDP){
+		if(ipPacket.getProtocol() == IPv4.PROTOCOL_UDP && ipPacket.getDestinationAddress() == IPv4.toIPv4Address("224.0.0.9")){
 			UDP udpPacket = (UDP) ipPacket.getPayload();
 			if(udpPacket.getDestinationPort() == (short) 520){
 				RIPv2 ripPacket = (RIPv2) udpPacket.getPayload();
@@ -161,7 +161,7 @@ public class Router extends Device
 	 */
 	public void handleResponse(RIPv2 response, int sourceSubnet, int sourceIP){
 		for(RIPv2Entry entry : response.getEntries()){
-			int dest = entry.getAddress();
+			int dest = entry.getAddress(); //destination subnet
 			int cost = entry.getMetric();
 			lock.lock();
 			try {
@@ -306,23 +306,20 @@ public class Router extends Device
 		Iface outIface = null; // the interface we'll send the packet out of (check return line)
 
 		// well need it for obtaining the sourceMac & outIface
-		int nextHopAddr = (bestMatch.getNextHopAddress() == 0)? bestMatch.getAddress(): bestMatch.getNextHopAddress();
+		int nextHopAddr = bestMatch.getNextHopAddress();
+		// this router is the destination, do not forward
+		if(nextHopAddr == 0) return;
 
-		MACAddress sourceMac = null;
 		for(Map.Entry<String, Iface> entry : this.getInterfaces().entrySet()){
-			Iface outface = (entry.getValue().getIpAddress() == nextHopAddr) ? entry.getValue() : outIface;
+			// interface corresponding to the next hop
+			outIface = (entry.getValue().getIpAddress() == nextHopAddr) ? entry.getValue() : outIface;
 			// Make sure we don't send a packet back out the interface it came in
-			if(outface == inIface)
+			if(outIface == inIface)
 			{return;}
-
-			if (entry.getValue().getIpAddress() == nextHopAddr){ // find the source mac while we're at it
-				sourceMac = entry.getValue().getMacAddress();
-				outIface = entry.getValue();
-			}
 		}
-
+		if(outIface == null) return;
 		// Set source MAC address in Ethernet header
-		etherPacket.setSourceMACAddress(sourceMac.toBytes());
+		etherPacket.setSourceMACAddress(outIface.getMacAddress().toBytes());
 
 		// If no gateway, then nextHop is IP destination
 		/*
