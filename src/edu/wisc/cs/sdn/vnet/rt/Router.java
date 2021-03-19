@@ -58,6 +58,7 @@ public class Router extends Device
 		// initializing route table with entries of directly connected interfaces
 		for(Iface i : this.getInterfaces().values()) {
 			int subnet = i.getIpAddress() & i.getSubnetMask();
+			System.out.println("Router.java : Router(): adding subnet " + subnet + "to RIP table");
 			ripTable.put(subnet, new RIPv2Entry(subnet, i.getSubnetMask(), 1, 0));
 		}
 		sender = new RIPv2Sender(this, ripTable);
@@ -153,7 +154,7 @@ public class Router extends Device
 				return ip & entry.getValue().getSubnetMask();
 			}
 		}
-		System.out.println("Router.java: lookupSubnet(): entry");
+		System.out.println("Router.java: lookupSubnet(): entry failed");
 		return -1;
 	}
 	/**
@@ -286,7 +287,7 @@ public class Router extends Device
 		// Get IP header
 		IPv4 ipPacket = (IPv4)etherPacket.getPayload();
 		int destAddr = ipPacket.getDestinationAddress();
-
+		System.out.println("size of rip table: " + ripTable.size());
 		int subnet = lookupSubnet(destAddr); // to retrieve entry from ripTable for which subnet is a key.
 
 		// Find matching route table entry 
