@@ -2,6 +2,7 @@ package edu.wisc.cs.sdn.vnet.rt;
 
 
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -210,7 +211,7 @@ public class Router extends Device
 				// send response if the packet received is a RIP request
 				if(ripPacket.getCommand() == RIPv2.COMMAND_REQUEST){
 					RIPv2 response = new RIPv2();
-					List<RIPv2Entry> entries = (List<RIPv2Entry>) ripTable.values();
+					List<RIPv2Entry> entries = new ArrayList<>(ripTable.values());
 					response.setEntries(entries);
 					response.setCommand(RIPv2.COMMAND_RESPONSE);
 					MACAddress srcMac = inIface.getMacAddress();

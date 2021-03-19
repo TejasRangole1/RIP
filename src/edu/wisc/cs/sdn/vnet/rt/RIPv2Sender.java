@@ -1,5 +1,6 @@
 package edu.wisc.cs.sdn.vnet.rt;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -73,7 +74,7 @@ public class RIPv2Sender implements Runnable {
 				break;
 			}
 			RIPv2 response = new RIPv2();
-			List<RIPv2Entry> entries = (List<RIPv2Entry>) ripTable.values();
+			List<RIPv2Entry> entries = new ArrayList<>(ripTable.values());
 			response.setEntries(entries);
 			response.setCommand(RIPv2.COMMAND_RESPONSE);
 			floodRIPv2Packet(response);
