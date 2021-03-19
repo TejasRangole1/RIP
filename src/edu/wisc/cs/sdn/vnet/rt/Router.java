@@ -13,6 +13,7 @@ import edu.wisc.cs.sdn.vnet.Iface;
 
 import net.floodlightcontroller.packet.Ethernet;
 import net.floodlightcontroller.packet.IPv4;
+import net.floodlightcontroller.packet.MACAddress;
 import net.floodlightcontroller.packet.RIPv2;
 import net.floodlightcontroller.packet.RIPv2Entry;
 import net.floodlightcontroller.packet.UDP;
@@ -30,10 +31,10 @@ public class Router extends Device
     /** Data Structure for RIP-based route table */
 	private Map<Integer, RIPv2Entry> ripTable;
     /** Thread to send RIP responses */
-	private RIPv2Sender ripSender;
+	private RIPv2Sender sender;
 
 	/** Thread to delete rip entries after time has expired*/
-	private RIPv2Updater ripUpdater;
+	private RIPv2Updater updater;
 
 	/** Thread to process RIP responses */
 
@@ -50,10 +51,10 @@ public class Router extends Device
 		// initializing route table with entries of directly connected interfaces
 		for(Iface i : this.getInterfaces().values()) {
 			int subnet = i.getIpAddress() & i.getSubnetMask();
-			ripTable.put(subnet, new RIPv2Entry(subnet, i.getSubnetMask(), 1, i.getIpAddress()));
+			ripTable.put(subnet, new RIPv2Entry(subnet, i.getSubnetMask(), 1, 0));
 		}
-		RIPv2Sender sender = new RIPv2Sender(this, ripTable);
-		RIPv2Updater updater = new RIPv2Updater(ripTable);
+		sender = new RIPv2Sender(this, ripTable);
+		updater = new RIPv2Updater(ripTable);
 	}
 
 	/**
@@ -105,21 +106,21 @@ public class Router extends Device
 	 * @param i
 	 * @return
 	 */
-	public Ethernet encapsulateRIPv2Packet(RIPv2 ripPacket, Iface i){
+	public Ethernet encapsulateRIPv2Packet(RIPv2 ripPacket, MACAddress srcMac, MACAddress dstMac, int srcIP, int dstIP){
 		UDP udpPacket = new UDP();
 		udpPacket.setSourcePort((short) 520);
 		udpPacket.setDestinationPort((short) 520);
 		udpPacket.setPayload(ripPacket);
 		IPv4 ipPacket = new IPv4();
 		ipPacket.setPayload(udpPacket);
-		ipPacket.setSourceAddress(i.getIpAddress());
-		ipPacket.setDestinationAddress("224.0.0.9");
+		ipPacket.setSourceAddress(srcIP);
+		ipPacket.setDestinationAddress(dstIP);
 		ipPacket.setProtocol(IPv4.PROTOCOL_UDP);
 		ipPacket.setTtl((byte) 2); 
 		Ethernet etherPacket = new Ethernet();
 		etherPacket.setPayload(ipPacket);
-		etherPacket.setSourceMACAddress(i.getMacAddress().toBytes());
-		etherPacket.setDestinationMACAddress("FF:FF:FF:FF:FF:FF");
+		etherPacket.setSourceMACAddress(srcMac.toBytes());
+		etherPacket.setDestinationMACAddress(dstMac.toBytes());
 		etherPacket.setEtherType(Ethernet.TYPE_IPv4);
 		return etherPacket;
 	}
@@ -131,15 +132,22 @@ public class Router extends Device
 	public RIPv2 isRIPv2Packet(Ethernet etherPacket){
 		IPv4 ipPacket = (IPv4) etherPacket.getPayload();
 		if(ipPacket.getProtocol() == IPv4.PROTOCOL_UDP){
-			if(ipPacket.getDestinationAddress() == IPv4.toIPv4Address("224.0.0.9")){
-				UDP udpPacket = (UDP) ipPacket.getPayload();
-				if(udpPacket.getDestinationPort() == (short) 520){
-					RIPv2 ripPacket = (RIPv2) udpPacket.getPayload();
-					return ripPacket;
-				}
+			UDP udpPacket = (UDP) ipPacket.getPayload();
+			if(udpPacket.getDestinationPort() == (short) 520){
+				RIPv2 ripPacket = (RIPv2) udpPacket.getPayload();
+				return ripPacket;
 			}
 		}
 		return null;
+	}
+	public int lookupSubnet(int ip){
+		for(Map.Entry<Integer, RIPv2Entry> entry : ripTable.entrySet()){
+			if((entry.getValue().getSubnetMask() & ip) == entry.getKey()){
+				return ip & entry.getValue().getSubnetMask();
+			}
+		}
+		System.out.println("Router.java: lookupSubnet(): entry");
+		return -1;
 	}
 	/**
 	 * Updates RIPv2 table by examining the response packet
@@ -192,7 +200,11 @@ public class Router extends Device
 					List<RIPv2Entry> entries = (List<RIPv2Entry>) ripTable.values();
 					response.setEntries(entries);
 					response.setCommand(RIPv2.COMMAND_RESPONSE);
-					Ethernet ripFrame = encapsulateRIPv2Packet(response, inIface);
+					MACAddress srcMac = inIface.getMacAddress();
+					MACAddress dstMac = etherPacket.getSourceMAC();
+					int srcIP = inIface.getIpAddress();
+					int dstIP = ipPacket.getSourceAddress();
+					Ethernet ripFrame = encapsulateRIPv2Packet(response, srcMac, dstMac, srcIP, dstIP);
 					sendPacket(ripFrame, inIface);
 				}
 				// update tables based on RIP response packet
@@ -259,7 +271,7 @@ public class Router extends Device
 
 		// Get IP header
 		IPv4 ipPacket = (IPv4)etherPacket.getPayload();
-		int dstAddr = ipPacket.getDestinationAddress();
+		int dstAddr = ipPacket.getDestinationAddress() & ipPacket.;
 
 		// Find matching route table entry 
 		// RouteEntry bestMatch = this.routeTable.lookup(dstAddr);
