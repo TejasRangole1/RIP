@@ -24,9 +24,10 @@ public class RIPv2Updater implements Runnable {
 
     public RIPv2Updater(Map<Integer, RIPv2Entry> ripTable, ReentrantLock lock){
         this.ripTable = ripTable;
-        timeoutThread = new Thread();
+        System.out.println("RIPv2Updater Created updater");
+        this.timeoutThread = new Thread();
         this.lock = lock;
-        timeoutThread.start();
+        this.timeoutThread.start();
     }
 
     @Override
