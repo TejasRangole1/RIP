@@ -249,7 +249,7 @@ public class Router extends Device
 					//System.out.println("-------------------------------------------------------------");
 					int sourceSubnet = ipPacket.getSourceAddress() & inIface.getSubnetMask();
 					//System.out.println("Router.java: handlePacket(): source subnet of incoming rip response: " + 
-					IPv4.fromIPv4Address(sourceSubnet));
+					//IPv4.fromIPv4Address(sourceSubnet));
 					handleResponse(ripPacket, sourceSubnet, ipPacket.getSourceAddress(), inIface);
 				}
 			}
