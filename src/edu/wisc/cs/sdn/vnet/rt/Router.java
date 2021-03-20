@@ -62,8 +62,8 @@ public class Router extends Device
 		// initializing route table with entries of directly connected interfaces
 		for(Iface i : this.getInterfaces().values()) {
 			int subnet = i.getIpAddress() & i.getSubnetMask();
-			System.out.println("Router.java : Router(): adding subnet " + subnet + "to RIP table");
-			ripTable.put(subnet, new RIPv2Entry(subnet, i.getSubnetMask(), 1, 0, i));
+			//System.out.println("Router.java : Router(): adding subnet " + subnet + "to RIP table");
+			ripTable.put(subnet, new RIPv2Entry(subnet, i.getSubnetMask(), 1, 0, i, true));
 		}
 		sender = new RIPv2Sender(this, ripTable);
 		updater = new RIPv2Updater(ripTable, lock);
@@ -155,12 +155,12 @@ public class Router extends Device
 	public int lookupSubnet(int ip){
 		for(Map.Entry<Integer, RIPv2Entry> entry : ripTable.entrySet()){
 			if((entry.getValue().getSubnetMask() & ip) == entry.getKey()){
-				System.out.println("Router.java: lookupSubnet() found subnet " + 
-				IPv4.fromIPv4Address(entry.getValue().getSubnetMask() & ip) + " for ip " + IPv4.fromIPv4Address(ip));
+				//System.out.println("Router.java: lookupSubnet() found subnet " + 
+				//IPv4.fromIPv4Address(entry.getValue().getSubnetMask() & ip) + " for ip " + IPv4.fromIPv4Address(ip));
 				return ip & entry.getValue().getSubnetMask();
 			}
 		}
-		System.out.println("Router.java: lookupSubnet(): entry failed");
+		//System.out.println("Router.java: lookupSubnet(): entry failed");
 		return -1;
 	}
 	/**
@@ -177,12 +177,12 @@ public class Router extends Device
 					cost += ripTable.get(sourceSubnet).getMetric();
 					// if the new cost to destination is less than the current cost, update the ripTable with the new route
 					if (cost < ripTable.get(dest).getMetric()) {
-						ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost, sourceIP, sourceIface));
+						ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost, sourceIP, sourceIface, false));
 					}
 				}
 				// route does not exist in rip table, add it
 				else {
-					ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost + ripTable.get(sourceSubnet).getMetric(), sourceIP, sourceIface));
+					ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost + ripTable.get(sourceSubnet).getMetric(), sourceIP, sourceIface, false));
 				}
 			} catch (Exception e){
 				e.printStackTrace();
@@ -223,7 +223,7 @@ public class Router extends Device
 				// send response if the packet received is a RIP request
 				if(ripPacket.getCommand() == RIPv2.COMMAND_REQUEST){
 					// handle rip request
-					System.out.println("Router.java: handlePacket() recevied rip request from " + ipPacket.getSourceAddress());
+					//System.out.println("Router.java: handlePacket() recevied rip request from " + ipPacket.getSourceAddress());
 					RIPv2 response = new RIPv2();
 					List<RIPv2Entry> entries = new ArrayList<>(ripTable.values());
 					response.setEntries(entries);
@@ -243,12 +243,12 @@ public class Router extends Device
 				}
 				// update tables based on RIP response packet
 				else{
-					System.out.println("Router.java: handlePacket(): Outputting RIP table: ");
-					System.out.println("----------------------------------------------------------");
-                    printRIPTable();
-					System.out.println("-------------------------------------------------------------");
+					//System.out.println("Router.java: handlePacket(): Outputting RIP table: ");
+					//System.out.println("----------------------------------------------------------");
+                    //printRIPTable();
+					//System.out.println("-------------------------------------------------------------");
 					int sourceSubnet = ipPacket.getSourceAddress() & inIface.getSubnetMask();
-					System.out.println("Router.java: handlePacket(): source subnet of incoming rip response: " + 
+					//System.out.println("Router.java: handlePacket(): source subnet of incoming rip response: " + 
 					IPv4.fromIPv4Address(sourceSubnet));
 					handleResponse(ripPacket, sourceSubnet, ipPacket.getSourceAddress(), inIface);
 				}
@@ -304,10 +304,10 @@ public class Router extends Device
 	private void forwardIpPacket(Ethernet etherPacket, Iface inIface)
 	{
 		// Make sure it's an IP packet
-		System.out.println("Router.java: forwardIpPacket(): Outputting RIP Table");
-		System.out.println("-------------------------------------------------------");
-		printRIPTable();
-		System.out.println("-------------------------------------------------------");
+		//System.out.println("Router.java: forwardIpPacket(): Outputting RIP Table");
+		//System.out.println("-------------------------------------------------------");
+		//printRIPTable();
+		//System.out.println("-------------------------------------------------------");
 		if (etherPacket.getEtherType() != Ethernet.TYPE_IPv4)
 		{ return; }
 
@@ -315,12 +315,12 @@ public class Router extends Device
 		IPv4 ipPacket = (IPv4)etherPacket.getPayload();
 		int destAddr = ipPacket.getDestinationAddress();
 		int subnet = lookupSubnet(destAddr); // to retrieve entry from ripTable for which subnet is a key.
-		System.out.println("Router.java: forwardIpPacket(): dest addr: " + IPv4.fromIPv4Address(destAddr) + " dest subnet: " + IPv4.fromIPv4Address(subnet));
+		//System.out.println("Router.java: forwardIpPacket(): dest addr: " + IPv4.fromIPv4Address(destAddr) + " dest subnet: " + IPv4.fromIPv4Address(subnet));
 		// Find matching route table entry 
 		// RouteEntry bestMatch = this.routeTable.lookup(dstAddr);
 		// Find matching route in rip table entry
 		RIPv2Entry bestMatch = ripTable.get(subnet);
-		System.out.println("Router.java: forwardIpPacket(): bestMatch subnet: " + IPv4.fromIPv4Address(bestMatch.getAddress()));
+		//System.out.println("Router.java: forwardIpPacket(): bestMatch subnet: " + IPv4.fromIPv4Address(bestMatch.getAddress()));
 		// If no entry matched, do nothing
 		if (null == bestMatch)
 		{ return; }
@@ -335,12 +335,12 @@ public class Router extends Device
 		
 		// this router is the destination, do not forward
 		Iface outIface = bestMatch.getOutIface();
-		System.out.println("Router.java: forwardIpPacket() outIface is " + outIface);
+		//System.out.println("Router.java: forwardIpPacket() outIface is " + outIface);
 		if(outIface == null) return;
 		etherPacket.setSourceMACAddress(outIface.getMacAddress().toBytes());
 		int nextHopAddr = bestMatch.getNextHopAddress();
 		nextHopAddr = (nextHopAddr == 0) ? destAddr : nextHopAddr;
-		System.out.println("Router.java: forwardIpPacket(): nextHop address: " + IPv4.fromIPv4Address(nextHopAddr));
+		//System.out.println("Router.java: forwardIpPacket(): nextHop address: " + IPv4.fromIPv4Address(nextHopAddr));
 		// Set source MAC address in Ethernet header
 		
 		// If no gateway, then nextHop is IP destination
@@ -354,7 +354,7 @@ public class Router extends Device
 		if (null == arpEntry)
 		{ return; }
 		etherPacket.setDestinationMACAddress(arpEntry.getMac().toBytes());
-		System.out.println("Router.java(): forwardIPPacket(): Sending IP packet to " + IPv4.fromIPv4Address(destAddr));
+		//System.out.println("Router.java(): forwardIPPacket(): Sending IP packet to " + IPv4.fromIPv4Address(destAddr));
 		this.sendPacket(etherPacket, outIface);
 
 		//
