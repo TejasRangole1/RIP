@@ -18,17 +18,19 @@ public class RIPv2Entry
 	protected int nextHopAddress;
 	protected int metric;
     protected long lastUpdated;
+    protected Iface outIface;
 
     public RIPv2Entry()
     { }
 
-    public RIPv2Entry(int address, int subnetMask, int metric, int nextHopAddress)
+    public RIPv2Entry(int address, int subnetMask, int metric, int nextHopAddress, Iface outIface)
     {
         this.addressFamily = ADDRESS_FAMILY_IPv4;
         this.address = address;
         this.subnetMask = subnetMask;
         this.metric = metric;
         this.nextHopAddress = nextHopAddress;
+        this.outIface = outIface;
         this.lastUpdated =  System.currentTimeMillis();
     }
 
@@ -44,6 +46,8 @@ public class RIPv2Entry
     public long getLastUpdated(){
         return this.lastUpdated;
     }
+
+    public Iface getOutIface() {return this.outIface;}
 
     public short getAddressFamily()
     { return this.addressFamily; }

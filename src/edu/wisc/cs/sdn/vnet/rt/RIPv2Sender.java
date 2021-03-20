@@ -28,6 +28,8 @@ public class RIPv2Sender implements Runnable {
 		this.router = router;
 		this.ripTable = someTable;
 		RIPv2 request = new RIPv2();
+		request.setCommand(RIPv2.COMMAND_REQUEST);
+		
 		floodRIPv2Packet(request);
 		responseThread = new Thread(this);
 		responseThread.start();
@@ -39,6 +41,7 @@ public class RIPv2Sender implements Runnable {
 	public void floodRIPv2Packet(RIPv2 ripPacket){
 		for(Iface i : router.getInterfaces().values()) {
 			Ethernet etherPacket = encapsulateRIPv2Packet(ripPacket, i);
+			//System.out.println("RIPv2Sender.java(): floodRIPv2Packet() sending rip packet out interface: " + i.getName());
 			router.sendPacket(etherPacket, i);
 		}
 	}

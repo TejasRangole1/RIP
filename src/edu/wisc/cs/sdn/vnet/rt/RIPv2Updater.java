@@ -14,7 +14,7 @@ public class RIPv2Updater implements Runnable {
 
     private Thread timeoutThread;
 
-    private static final long TIMEOUT = 30;
+    private static final long TIMEOUT = 30000;
 
     private ReentrantLock lock;
 
