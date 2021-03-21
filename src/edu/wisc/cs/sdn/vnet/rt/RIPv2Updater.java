@@ -37,7 +37,7 @@ public class RIPv2Updater implements Runnable {
         while(true) {
             lock.lock();
             try {
-                System.out.println("RIPv2Updater.java: run() Successfully acquired lock");
+                //System.out.println("RIPv2Updater.java: run() Successfully acquired lock");
                 Set<Integer> expiredNextHops = new HashSet<>();
                 //find all entries which are expired and delete them
                 for (Map.Entry<Integer, RIPv2Entry> entry : ripTable.entrySet()) {
