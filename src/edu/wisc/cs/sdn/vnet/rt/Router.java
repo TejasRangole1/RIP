@@ -63,7 +63,7 @@ public class Router extends Device
 		for(Iface i : this.getInterfaces().values()) {
 			int subnet = i.getIpAddress() & i.getSubnetMask();
 			//System.out.println("Router.java : Router(): adding subnet " + subnet + "to RIP table");
-			ripTable.put(subnet, new RIPv2Entry(subnet, i.getSubnetMask(), 1, 0, i, true, System.currentTimeMillis()));
+			ripTable.put(subnet, new RIPv2Entry(subnet, i.getSubnetMask(), 1, 0, i, true));
 		}
 		sender = new RIPv2Sender(this, ripTable);
 		Thread ripUpdater = new Thread(new RIPv2Updater(ripTable, lock));
@@ -169,31 +169,30 @@ public class Router extends Device
 	 * @param response
 	 */
 	public void handleResponse(RIPv2 response, int sourceSubnet, int sourceIP, Iface sourceIface){
-		lock.lock();
-		// updating the RIPv2 entry of the router that sent the response to indicate that the directly connected route is connected to a router, not
-		ripTable.put(sourceSubnet, new RIPv2Entry(sourceSubnet, sourceIface.getSubnetMask(), 1, 0, sourceIface, false, System.currentTimeMillis()));
-		try {
-			for(RIPv2Entry entry : response.getEntries()){
-				int dest = entry.getAddress(); //destination subnet
-				int cost = entry.getMetric();
-				
+		for(RIPv2Entry entry : response.getEntries()){
+			int dest = entry.getAddress(); //destination subnet
+			int cost = entry.getMetric();
+			if(entry.getMetric() == 16) continue;
+			lock.lock();
+			try {
+				// updating the RIPv2 entry of the router that sent the response to indicate that the directly connected route is connected to a router, not a host
+				ripTable.put(sourceSubnet, new RIPv2Entry(sourceSubnet, sourceIface.getSubnetMask(), 1, 0, sourceIface, false));
 				if (ripTable.containsKey(dest)) {
 					cost += ripTable.get(sourceSubnet).getMetric();
 					// if the new cost to destination is less than the current cost, update the ripTable with the new route
 					if (cost < ripTable.get(dest).getMetric()) {
-						ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost, sourceIP, sourceIface, false, System.currentTimeMillis()));
+						ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost, sourceIP, sourceIface, false));
 					}
 				}
 				// route does not exist in rip table, add it
 				else {
-					long time = (entry.getNextHopAddress() == 0) ? System.currentTimeMillis() : entry.getLastUpdated();
-					ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost + ripTable.get(sourceSubnet).getMetric(), sourceIP, sourceIface, false, time));
+					ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost + ripTable.get(sourceSubnet).getMetric(), sourceIP, sourceIface, false));
 				}
+			} catch (Exception e){
+				e.printStackTrace();
+			} finally {
+				lock.unlock();
 			}
-		} catch (Exception e){
-			e.printStackTrace();
-		} finally {
-			lock.unlock();
 		}
 	}
 
