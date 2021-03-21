@@ -187,7 +187,7 @@ public class Router extends Device
 				// route does not exist in rip table, add it
 				else {
 					long time = (entry.getNextHopAddress() == 0) ? System.currentTimeMillis() : entry.getLastUpdated();
-					ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost + ripTable.get(sourceSubnet).getMetric(), sourceIP, sourceIface, false, time
+					ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost + ripTable.get(sourceSubnet).getMetric(), sourceIP, sourceIface, false, time));
 				}
 			}
 		} catch (Exception e){
