@@ -195,7 +195,8 @@ public class Router extends Device
 
 	public void printRIPTable(){
 		for(Map.Entry<Integer, RIPv2Entry> entry : ripTable.entrySet()){
-			System.out.println("dest subnet: " + IPv4.fromIPv4Address(entry.getKey()) + " cost= " + entry.getValue().getMetric() + " next hop IP: " + IPv4.fromIPv4Address(entry.getValue().getNextHopAddress()));
+			System.out.println("dest subnet: " + IPv4.fromIPv4Address(entry.getKey()) + " cost= " + entry.getValue().getMetric() + " next hop IP: " + IPv4.fromIPv4Address(entry.getValue().getNextHopAddress()) + 
+			" is host= " + entry.getValue().isHost());
 		}
 	}
 
@@ -333,7 +334,7 @@ public class Router extends Device
 		if (outIface == inIface)
 		{ return; }
         */
-		System.out.println("Router.java: forwardIpPacket(): sending to dest subnet: " + bestMatch.getAddress());
+		System.out.println("Router.java: forwardIpPacket(): sending to dest subnet: " + IPv4.fromIPv4Address(bestMatch.getAddress()));
 		System.out.println("------------------------Route Table------------------------------------------------");
 		printRIPTable();
 		System.out.println("------------------------------------------------------------------------------------");	
