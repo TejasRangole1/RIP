@@ -182,11 +182,22 @@ public class Router extends Device
 					// if the new cost to destination is less than the current cost, update the ripTable with the new route
 					if (cost < ripTable.get(dest).getMetric()) {
 						ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost, sourceIP, sourceIface, false));
+						System.out.println("Router.java: handleResponse(): INSERTING ENTRY: " + IPv4.fromIPv4Address(dest) + " Outputting RIPv2 Table");
+						System.out.println("------------------------------------------------------");
+						printRIPTable();
+						System.out.println("-------------------------------------------------------");
+					}
+					else {
+						ripTable.get(dest).setLastUpdated(System.currentTimeMillis());
 					}
 				}
 				// route does not exist in rip table, add it
 				else {
 					ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost + ripTable.get(sourceSubnet).getMetric(), sourceIP, sourceIface, false));
+					System.out.println("Router.java: handleResponse(): INSERTING ENTRY: " + IPv4.fromIPv4Address(dest) + " Outputting RIPv2 Table");
+					System.out.println("------------------------------------------------------");
+					printRIPTable();
+					System.out.println("-------------------------------------------------------");
 				}
 			} catch (Exception e){
 				e.printStackTrace();
@@ -337,10 +348,10 @@ public class Router extends Device
 		if (outIface == inIface)
 		{ return; }
         */
-		System.out.println("Router.java: forwardIpPacket(): sending to dest subnet: " + IPv4.fromIPv4Address(bestMatch.getAddress()));
-		System.out.println("------------------------Route Table------------------------------------------------");
-		printRIPTable();
-		System.out.println("------------------------------------------------------------------------------------");	
+		//System.out.println("Router.java: forwardIpPacket(): sending to dest subnet: " + IPv4.fromIPv4Address(bestMatch.getAddress()));
+		//System.out.println("------------------------Route Table------------------------------------------------");
+		//printRIPTable();
+		//System.out.println("------------------------------------------------------------------------------------");	
 		// this router is the destination, do not forward
 		Iface outIface = bestMatch.getOutIface();
 		//System.out.println("Router.java: forwardIpPacket() outIface is " + outIface);

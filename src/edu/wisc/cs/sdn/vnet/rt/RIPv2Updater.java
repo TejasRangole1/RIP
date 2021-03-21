@@ -42,6 +42,14 @@ public class RIPv2Updater implements Runnable {
 		//System.out.println("Router.java: lookupSubnet(): entry failed");
 		return -1;
 	}
+
+    public void printRIPTable(){
+		for(Map.Entry<Integer, RIPv2Entry> entry : ripTable.entrySet()){
+			System.out.println("dest subnet: " + IPv4.fromIPv4Address(entry.getKey()) + " cost= " + entry.getValue().getMetric() + " next hop IP: " + IPv4.fromIPv4Address(entry.getValue().getNextHopAddress()) + 
+			" is host= " + entry.getValue().isHost());
+		}
+	}
+
   
     @Override
     public void run() {
@@ -57,9 +65,13 @@ public class RIPv2Updater implements Runnable {
                         int deletedSubnet = entry.getKey();
                         expiredSubnets.add(deletedSubnet);
                         ripTable.remove(deletedSubnet);
-                        System.out.println("RIPv2Updater.java: run(): removed " + "dest: " + IPv4.fromIPv4Address(entry.getKey()));
+                        System.out.println("Router.java: handleResponse(): DELETING ENTRY: " + IPv4.fromIPv4Address(deletedSubnet) + " Outputting RIPv2 Table");
+						System.out.println("------------------------------------------------------");
+						printRIPTable();
+						System.out.println("-------------------------------------------------------");
                     }
                 }
+                /*
                 // deleting all entries whose route to next hop was deleted in the previous step
                 for(Map.Entry<Integer, RIPv2Entry> entry : ripTable.entrySet()){
                     int nextHop = entry.getValue().getNextHopAddress();
@@ -69,6 +81,7 @@ public class RIPv2Updater implements Runnable {
                         System.out.println("RIPv2Updater.java: run() removed dest: " + IPv4.fromIPv4Address(subnetNumber) + " as a result of the previous removal");
                     }
                 }
+                */
             } catch (Exception e){
                 e.printStackTrace();
             } finally {
