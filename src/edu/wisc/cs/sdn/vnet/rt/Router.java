@@ -169,29 +169,31 @@ public class Router extends Device
 	 * @param response
 	 */
 	public void handleResponse(RIPv2 response, int sourceSubnet, int sourceIP, Iface sourceIface){
-		for(RIPv2Entry entry : response.getEntries()){
-			int dest = entry.getAddress(); //destination subnet
-			int cost = entry.getMetric();
-			lock.lock();
-			try {
-				// updating the RIPv2 entry of the router that sent the response to indicate that the directly connected route is connected to a router, not a host
-				ripTable.put(sourceSubnet, new RIPv2Entry(sourceSubnet, sourceIface.getSubnetMask(), 1, 0, sourceIface, false));
+		lock.lock();
+		// updating the RIPv2 entry of the router that sent the response to indicate that the directly connected route is connected to a router, not
+		ripTable.put(sourceSubnet, new RIPv2Entry(sourceSubnet, sourceIface.getSubnetMask(), 1, 0, sourceIface, false, System.currentTimeMillis()));
+		try {
+			for(RIPv2Entry entry : response.getEntries()){
+				int dest = entry.getAddress(); //destination subnet
+				int cost = entry.getMetric();
+				
 				if (ripTable.containsKey(dest)) {
 					cost += ripTable.get(sourceSubnet).getMetric();
 					// if the new cost to destination is less than the current cost, update the ripTable with the new route
 					if (cost < ripTable.get(dest).getMetric()) {
-						ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost, sourceIP, sourceIface, false));
+						ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost, sourceIP, sourceIface, false, System.currentTimeMillis()));
 					}
 				}
 				// route does not exist in rip table, add it
 				else {
-					ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost + ripTable.get(sourceSubnet).getMetric(), sourceIP, sourceIface, false));
+					long time = (entry.getNextHopAddress() == 0) ? System.currentTimeMillis() : entry.getLastUpdated();
+					ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost + ripTable.get(sourceSubnet).getMetric(), sourceIP, sourceIface, false, time
 				}
-			} catch (Exception e){
-				e.printStackTrace();
-			} finally {
-				lock.unlock();
 			}
+		} catch (Exception e){
+			e.printStackTrace();
+		} finally {
+			lock.unlock();
 		}
 	}
 
