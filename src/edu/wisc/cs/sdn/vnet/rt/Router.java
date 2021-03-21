@@ -63,7 +63,7 @@ public class Router extends Device
 		for(Iface i : this.getInterfaces().values()) {
 			int subnet = i.getIpAddress() & i.getSubnetMask();
 			//System.out.println("Router.java : Router(): adding subnet " + subnet + "to RIP table");
-			ripTable.put(subnet, new RIPv2Entry(subnet, i.getSubnetMask(), 1, 0, i, true));
+			ripTable.put(subnet, new RIPv2Entry(subnet, i.getSubnetMask(), 1, 0, i, true, System.currentTimeMillis()));
 		}
 		sender = new RIPv2Sender(this, ripTable);
 		Thread ripUpdater = new Thread(new RIPv2Updater(ripTable, lock));
