@@ -207,7 +207,8 @@ public class Router extends Device
 	 * @param inIface the interface on which the packet was received
 	 */
 	public void handlePacket(Ethernet etherPacket, Iface inIface)
-	{
+	{    
+		/*
 		System.out.println("*** -> Received packet: " +
 				etherPacket.toString().replace("\n", "\n\t"));
 
@@ -311,7 +312,7 @@ public class Router extends Device
 		//System.out.println("-------------------------------------------------------");
 		if (etherPacket.getEtherType() != Ethernet.TYPE_IPv4)
 		{ return; }
-
+        
 		// Get IP header
 		IPv4 ipPacket = (IPv4)etherPacket.getPayload();
 		int destAddr = ipPacket.getDestinationAddress();
@@ -332,8 +333,10 @@ public class Router extends Device
 		if (outIface == inIface)
 		{ return; }
         */
-
-		
+		System.out.println("Router.java: forwardIpPacket(): sending to dest subnet: " + bestMatch.getAddress());
+		System.out.println("------------------------Route Table------------------------------------------------");
+		printRIPTable();
+		System.out.println("------------------------------------------------------------------------------------");	
 		// this router is the destination, do not forward
 		Iface outIface = bestMatch.getOutIface();
 		//System.out.println("Router.java: forwardIpPacket() outIface is " + outIface);

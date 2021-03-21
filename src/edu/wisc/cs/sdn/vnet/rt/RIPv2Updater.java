@@ -42,18 +42,19 @@ public class RIPv2Updater implements Runnable {
                 //find all entries which are expired and delete them
                 for (Map.Entry<Integer, RIPv2Entry> entry : ripTable.entrySet()) {
                     if (System.currentTimeMillis() - entry.getValue().getLastUpdated() >= TIMEOUT && entry.getValue().isHost() == false){
-                        System.out.println("RIPv2Updater.java: run(): removed " + "dest: " + IPv4.fromIPv4Address(entry.getKey()));
                         int nextHop = entry.getValue().getNextHopAddress();
                         if(nextHop != 0) { 
                             expiredNextHops.add(entry.getValue().getNextHopAddress());
                         }
                         ripTable.remove(entry.getKey());
+                        System.out.println("RIPv2Updater.java: run(): removed " + "dest: " + IPv4.fromIPv4Address(entry.getKey()));
                     }
                 }
                 // deleting all entries whose route to next hop was deleted in the previous step
                 for(Map.Entry<Integer, RIPv2Entry> entry : ripTable.entrySet()){
                     if(expiredNextHops.contains(entry.getValue().getNextHopAddress())) { 
                         ripTable.remove(entry.getKey());
+                        System.out.println("RIPv2Updater.java: run(): removed " + "dest: " + IPv4.fromIPv4Address(entry.getKey()));
                     }
                 }
             } catch (Exception e){
