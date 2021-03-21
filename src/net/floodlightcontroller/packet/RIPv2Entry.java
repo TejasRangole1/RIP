@@ -49,6 +49,10 @@ public class RIPv2Entry
         return this.isHost;
     }
 
+    public void setIsHost(boolean set){
+        this.isHost = set;
+    }
+
     public long getLastUpdated(){
         return this.lastUpdated;
     }

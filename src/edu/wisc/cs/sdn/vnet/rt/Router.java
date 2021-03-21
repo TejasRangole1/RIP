@@ -174,6 +174,8 @@ public class Router extends Device
 			int cost = entry.getMetric();
 			lock.lock();
 			try {
+				// updating the RIPv2 entry of the router that sent the response to indicate that the directly connected route is connected to a router, not a host
+				ripTable.put(sourceSubnet, new RIPv2Entry(sourceSubnet, sourceIface.getSubnetMask(), 1, 0, sourceIface, false));
 				if (ripTable.containsKey(dest)) {
 					cost += ripTable.get(sourceSubnet).getMetric();
 					// if the new cost to destination is less than the current cost, update the ripTable with the new route

@@ -30,6 +30,18 @@ public class RIPv2Updater implements Runnable {
         this.lock = lock;
         //this.timeoutThread.start();
     }
+
+    public int lookupSubnet(int ip){
+		for(Map.Entry<Integer, RIPv2Entry> entry : ripTable.entrySet()){
+			if((entry.getValue().getSubnetMask() & ip) == entry.getKey()){
+				//System.out.println("Router.java: lookupSubnet() found subnet " + 
+				//IPv4.fromIPv4Address(entry.getValue().getSubnetMask() & ip) + " for ip " + IPv4.fromIPv4Address(ip));
+				return ip & entry.getValue().getSubnetMask();
+			}
+		}
+		//System.out.println("Router.java: lookupSubnet(): entry failed");
+		return -1;
+	}
   
     @Override
     public void run() {
@@ -38,23 +50,23 @@ public class RIPv2Updater implements Runnable {
             lock.lock();
             try {
                 //System.out.println("RIPv2Updater.java: run() Successfully acquired lock");
-                Set<Integer> expiredNextHops = new HashSet<>();
+                Set<Integer> expiredSubnets = new HashSet<>();
                 //find all entries which are expired and delete them
                 for (Map.Entry<Integer, RIPv2Entry> entry : ripTable.entrySet()) {
                     if (System.currentTimeMillis() - entry.getValue().getLastUpdated() >= TIMEOUT && entry.getValue().isHost() == false){
-                        int nextHop = entry.getValue().getNextHopAddress();
-                        if(nextHop != 0) { 
-                            expiredNextHops.add(entry.getValue().getNextHopAddress());
-                        }
-                        ripTable.remove(entry.getKey());
+                        int deletedSubnet = entry.getKey();
+                        expiredSubnets.add(deletedSubnet);
+                        ripTable.remove(deletedSubnet);
                         System.out.println("RIPv2Updater.java: run(): removed " + "dest: " + IPv4.fromIPv4Address(entry.getKey()));
                     }
                 }
                 // deleting all entries whose route to next hop was deleted in the previous step
                 for(Map.Entry<Integer, RIPv2Entry> entry : ripTable.entrySet()){
-                    if(expiredNextHops.contains(entry.getValue().getNextHopAddress())) { 
-                        ripTable.remove(entry.getKey());
-                        System.out.println("RIPv2Updater.java: run(): removed " + "dest: " + IPv4.fromIPv4Address(entry.getKey()));
+                    int nextHop = entry.getValue().getNextHopAddress();
+                    int subnetNumber = lookupSubnet(nextHop);
+                    if(expiredSubnets.contains(subnetNumber)){
+                        ripTable.remove(subnetNumber);
+                        System.out.println("RIPv2Updater.java: run() removed dest: " + IPv4.fromIPv4Address(subnetNumber) + " as a result of the previous removal");
                     }
                 }
             } catch (Exception e){
