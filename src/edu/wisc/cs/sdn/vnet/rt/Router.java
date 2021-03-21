@@ -67,6 +67,7 @@ public class Router extends Device
 		}
 		sender = new RIPv2Sender(this, ripTable);
 		Thread ripUpdater = new Thread(new RIPv2Updater(ripTable, lock));
+		ripUpdater.start();
 	}
 
 	/**
