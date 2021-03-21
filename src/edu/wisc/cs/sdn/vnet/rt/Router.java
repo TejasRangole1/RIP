@@ -66,7 +66,7 @@ public class Router extends Device
 			ripTable.put(subnet, new RIPv2Entry(subnet, i.getSubnetMask(), 1, 0, i, true));
 		}
 		sender = new RIPv2Sender(this, ripTable);
-		updater = new RIPv2Updater(ripTable, lock);
+		Thread ripUpdater = new Thread(new RIPv2Updater(ripTable, lock));
 	}
 
 	/**

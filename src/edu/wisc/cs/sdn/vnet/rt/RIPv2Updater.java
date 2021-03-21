@@ -16,7 +16,7 @@ public class RIPv2Updater implements Runnable {
     
     private Map<Integer, RIPv2Entry> ripTable;
 
-    private Thread timeoutThread;
+    // private Thread timeoutThread;
 
     private static final long TIMEOUT = 30000;
 
@@ -25,11 +25,12 @@ public class RIPv2Updater implements Runnable {
     public RIPv2Updater(Map<Integer, RIPv2Entry> ripTable, ReentrantLock lock){
         this.ripTable = ripTable;
         System.out.println("RIPv2Updater Created updater");
-        this.timeoutThread = new Thread();
-        this.lock = lock;
-        this.timeoutThread.start();
-    }
 
+        //this.timeoutThread = new Thread();
+        this.lock = lock;
+        //this.timeoutThread.start();
+    }
+  
     @Override
     public void run() {
         // TODO Auto-generated method stub
