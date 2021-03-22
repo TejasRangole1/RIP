@@ -172,32 +172,34 @@ public class Router extends Device
 		for(RIPv2Entry entry : response.getEntries()){
 			int dest = entry.getAddress(); //destination subnet
 			int cost = entry.getMetric();
-			if(entry.getMetric() == 16) continue;
 			lock.lock();
 			try {
 				// updating the RIPv2 entry of the router that sent the response to indicate that the directly connected route is connected to a router, not a host
+				if(entry.getMetric() == 16){
+					continue;
+				}
 				ripTable.put(sourceSubnet, new RIPv2Entry(sourceSubnet, sourceIface.getSubnetMask(), 1, 0, sourceIface, false));
 				if (ripTable.containsKey(dest)) {
 					cost += ripTable.get(sourceSubnet).getMetric();
 					// if the new cost to destination is less than the current cost, update the ripTable with the new route
 					if (cost < ripTable.get(dest).getMetric()) {
 						ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost, sourceIP, sourceIface, false));
-						System.out.println("Router.java: handleResponse(): INSERTING ENTRY: " + IPv4.fromIPv4Address(dest) + " Outputting RIPv2 Table");
-						System.out.println("------------------------------------------------------");
-						printRIPTable();
-						System.out.println("-------------------------------------------------------");
+						System.out.println("Router.java: handleResponse(): INSERTED ENTRY: " + IPv4.fromIPv4Address(dest) + " OUTPUTTING ROUTE TABLE");
+                        System.out.println("-----------------------------------------------------------------------------------------------------------");
+                        printRIPTable();
+                        System.out.println("------------------------------------------------------------------------------------------------------------");
 					}
-					else {
+					else if(cost == ripTable.get(dest).getMetric()){
 						ripTable.get(dest).setLastUpdated(System.currentTimeMillis());
 					}
 				}
 				// route does not exist in rip table, add it
 				else {
 					ripTable.put(dest, new RIPv2Entry(dest, entry.getSubnetMask(), cost + ripTable.get(sourceSubnet).getMetric(), sourceIP, sourceIface, false));
-					System.out.println("Router.java: handleResponse(): INSERTING ENTRY: " + IPv4.fromIPv4Address(dest) + " Outputting RIPv2 Table");
-					System.out.println("------------------------------------------------------");
-					printRIPTable();
-					System.out.println("-------------------------------------------------------");
+					System.out.println("Router.java: handleResponse(): INSERTED ENTRY: " + IPv4.fromIPv4Address(dest) + " OUTPUTTING ROUTE TABLE");
+                    System.out.println("-----------------------------------------------------------------------------------------------------------");
+                    printRIPTable();
+                    System.out.println("------------------------------------------------------------------------------------------------------------");
 				}
 			} catch (Exception e){
 				e.printStackTrace();
@@ -210,7 +212,7 @@ public class Router extends Device
 	public void printRIPTable(){
 		for(Map.Entry<Integer, RIPv2Entry> entry : ripTable.entrySet()){
 			System.out.println("dest subnet: " + IPv4.fromIPv4Address(entry.getKey()) + " cost= " + entry.getValue().getMetric() + " next hop IP: " + IPv4.fromIPv4Address(entry.getValue().getNextHopAddress()) + 
-			" is host= " + entry.getValue().isHost());
+			" is host= " + entry.getValue().isHost() + " timestamp= " + entry.getValue().getLastUpdated());
 		}
 	}
 
@@ -260,11 +262,13 @@ public class Router extends Device
 				}
 				// update tables based on RIP response packet
 				else{
+					
 					//System.out.println("Router.java: handlePacket(): Outputting RIP table: ");
 					//System.out.println("----------------------------------------------------------");
                     //printRIPTable();
 					//System.out.println("-------------------------------------------------------------");
 					int sourceSubnet = ipPacket.getSourceAddress() & inIface.getSubnetMask();
+					System.out.println("Router.java: handlePacket(): RECEIVED RIPv2 RESPONSE FROM: " + IPv4.fromIPv4Address(sourceSubnet));
 					//System.out.println("Router.java: handlePacket(): source subnet of incoming rip response: " + 
 					//IPv4.fromIPv4Address(sourceSubnet));
 					handleResponse(ripPacket, sourceSubnet, ipPacket.getSourceAddress(), inIface);
@@ -348,10 +352,7 @@ public class Router extends Device
 		if (outIface == inIface)
 		{ return; }
         */
-		//System.out.println("Router.java: forwardIpPacket(): sending to dest subnet: " + IPv4.fromIPv4Address(bestMatch.getAddress()));
-		//System.out.println("------------------------Route Table------------------------------------------------");
-		//printRIPTable();
-		//System.out.println("------------------------------------------------------------------------------------");	
+	
 		// this router is the destination, do not forward
 		Iface outIface = bestMatch.getOutIface();
 		//System.out.println("Router.java: forwardIpPacket() outIface is " + outIface);

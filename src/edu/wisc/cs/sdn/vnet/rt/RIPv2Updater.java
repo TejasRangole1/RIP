@@ -46,10 +46,9 @@ public class RIPv2Updater implements Runnable {
     public void printRIPTable(){
 		for(Map.Entry<Integer, RIPv2Entry> entry : ripTable.entrySet()){
 			System.out.println("dest subnet: " + IPv4.fromIPv4Address(entry.getKey()) + " cost= " + entry.getValue().getMetric() + " next hop IP: " + IPv4.fromIPv4Address(entry.getValue().getNextHopAddress()) + 
-			" is host= " + entry.getValue().isHost());
+			" is host= " + entry.getValue().isHost() + " timestamp= " + entry.getValue().getLastUpdated());
 		}
 	}
-
   
     @Override
     public void run() {
@@ -65,10 +64,11 @@ public class RIPv2Updater implements Runnable {
                         int deletedSubnet = entry.getKey();
                         expiredSubnets.add(deletedSubnet);
                         ripTable.remove(deletedSubnet);
-                        System.out.println("Router.java: handleResponse(): DELETING ENTRY: " + IPv4.fromIPv4Address(deletedSubnet) + " Outputting RIPv2 Table");
-						System.out.println("------------------------------------------------------");
-						printRIPTable();
-						System.out.println("-------------------------------------------------------");
+                        System.out.println("RIPv2Updater.java: run(): REMOVED ENTRY: " + IPv4.fromIPv4Address(deletedSubnet) + " OUTPUTTING ROUTE TABLE");
+                        System.out.println("-----------------------------------------------------------------------------------------------------------");
+                        printRIPTable();
+                        System.out.println("------------------------------------------------------------------------------------------------------------");
+                        
                     }
                 }
                 /*
